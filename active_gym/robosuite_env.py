@@ -184,8 +184,8 @@ class RobosuiteActiveEnv(gym.Wrapper):
     def __init__(self, env, args):
         super().__init__(env)
         self.args = args
-        self.init_fov_pos = env.activeview_camera_init_pos
-        self.init_fov_quat = env.activeview_camera_init_quat
+        self.init_fov_pos = env.unwrapped.activeview_camera_init_pos
+        self.init_fov_quat = env.unwrapped.activeview_camera_init_quat
         self.sensory_action_mode = args.sensory_action_mode
         self.sensory_action_dim = 6 # 6-DOF: pos, ang
         sensory_action_space_high = 1. * np.ones(self.sensory_action_dim)
@@ -901,7 +901,7 @@ if __name__ == "__main__":
             print (obs[k].shape)
         # print (type(obs))
         active_camera_mover.move_camera(direction=[1.0, 1.0, 1.0], scale=0.05)
-        active_camera_mover.rotate_camera(pyr=np.ndarray([0.0, 0.0, 1.0])) # +up, +left, +clcwise
+        active_camera_mover.rotate_camera(pyr=np.array([0, 0, 1])) # +up, +left, +clcwise
         activeview_camera_pos, activeview_camera_quat = active_camera_mover.get_camera_pose()
         # print (activeview_camera_pos, activeview_camera_quat)
         # print (type(obs), obs.shape, obs.max(), obs.min())
@@ -915,6 +915,7 @@ if __name__ == "__main__":
         os.mkdir("tmp")
     for cam_name in obss_dict:
         cam_obss = np.hstack(obss_dict[cam_name])
+        print(cam_name, cam_obss.shape)
         cv2.imwrite(f"tmp/robosuite_env_test_{cam_name}.png", cam_obss)
     env.close()
 
@@ -938,12 +939,14 @@ if __name__ == "__main__":
             obs_cam = obs[f"{obs_name}"]
             if obs_name not in obss_dict:
                 obss_dict[obs_name] = []
-            obss_dict[obs_name].append(obs_cam[..., ::-1]*255.) # !important to have this change, don't know why it is upside down
+            # obss_dict[obs_name].append(obs_cam[..., ::-1]*255.) # !important to have this change, don't know why it is upside down
+            obss_dict[obs_name].append(obs_cam[::-1, ..., ::-1].transpose(1,2,0) * 255) # !important to have this change, don't know why it is upside down
             # print (obs_cam.shape)
     if not os.path.exists("tmp"):
         os.mkdir("tmp")
     for obs_name in obss_dict:
         cam_obss = np.hstack(obss_dict[obs_name])
+        print(cam_name, cam_obss.shape)
         cv2.imwrite(f"tmp/robosuite_env_wrapped_test_{obs_name}.png", cam_obss)
     env.close()
 
