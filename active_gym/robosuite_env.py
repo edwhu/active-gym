@@ -188,6 +188,8 @@ class RobosuiteActiveEnv(gym.Wrapper):
         self.init_fov_quat = env.unwrapped.activeview_camera_init_quat
         self.sensory_action_mode = args.sensory_action_mode
         self.sensory_action_dim = 6 # 6-DOF: pos, ang
+        self.move_camera_scale = args.move_camera_scale
+        self.rotate_camera_scale = args.rotate_camera_scale
         sensory_action_space_high = 1. * np.ones(self.sensory_action_dim)
         sensory_action_space_low = -sensory_action_space_high
         self.sensory_action_space = Box(low=sensory_action_space_low, 
@@ -246,8 +248,8 @@ class RobosuiteActiveEnv(gym.Wrapper):
             # print ("movement, rotation", movement, rotation)
             if len(rotation) < 3:
                 rotation = np.concatenate([rotation, np.zeros((3-len(rotation), ), dtype=rotation.dtype)])
-            self.active_camera_mover.move_camera(direction=movement, scale=0.01)
-            self.active_camera_mover.rotate_camera(pyr=rotation, scale=1.0) # +up, +left, +clcwise
+            self.active_camera_mover.move_camera(direction=movement, scale=self.move_camera_scale)
+            self.active_camera_mover.rotate_camera(pyr=rotation, scale=self.rotate_camera_scale) # +up, +left, +clcwise
 
         if self.return_camera_matrix:
             activeview_camera_pos, activeview_camera_quat = self.active_camera_mover.get_camera_pose()
@@ -783,6 +785,8 @@ class RobosuiteEnvArgs:
         self.clip_reward = False
         self.selected_obs_names = ["sideview_image", "active_view_image"]
         self.sensory_action_mode = "relative"
+        self.move_camera_scale = 0.01
+        self.rotate_camera_scale = 1.0
         self.return_camera_matrix = False
 
         # active env kwargs but pass into robosuite make
@@ -829,7 +833,8 @@ def make_active_robosuite_env(args: RobosuiteEnvArgs):
     """
     robosuite_kwargs = get_robosuite_kwargs(args)
     env = robosuite.make(env_name="Active"+args.task, **robosuite_kwargs)
-    env = RobosuiteGymWrapper(env, keys=args.selected_obs_names)
+    # env = RobosuiteGymWrapper(env, keys=args.selected_obs_names)
+    env = RobosuiteGymWrapper(env, keys=None)
     env = RecordWrapper(env, args)
     env = RobosuiteActiveEnv(env, args)
     return env
